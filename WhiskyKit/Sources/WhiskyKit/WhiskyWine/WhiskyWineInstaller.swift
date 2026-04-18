@@ -61,7 +61,7 @@ public class WhiskyWineInstaller {
     }
 
     public static func shouldUpdateWhiskyWine() async -> (Bool, SemanticVersion) {
-        let versionPlistURL = "https://github.com/GioMarcolla/Whisky-Wine/releases/latest/" +
+        let versionPlistURL = "https://github.com/GioMarcolla/WhiskyX/releases/latest/" +
                               "download/WhiskyWineVersion.plist"
         let localVersion = whiskyWineVersion()
 
