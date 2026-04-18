@@ -1,0 +1,38 @@
+name: Build and Release Wine
+
+on:
+  workflow_dispatch:
+    inputs:
+      wine_version:
+        description: 'Wine version to build and release (e.g., 9.0)'
+        required: true
+        default: '9.0'
+
+jobs:
+  build-wine:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make Build Script Executable
+        run: chmod +x scripts/build_wine.sh
+
+      - name: Run Build Script
+        run: |
+          # Override the script's internal version with the workflow input
+          sed -i '' "s/WINE_VERSION=\"9.0\"/WINE_VERSION=\"${{ github.event.inputs.wine_version }}\"/" scripts/build_wine.sh
+          ./scripts/build_wine.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Wine Release
+          files: |
+            build_output/Libraries.tar.gz
+            build_output/Libraries/WhiskyWineVersion.plist
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
