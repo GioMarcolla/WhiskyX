@@ -71,8 +71,17 @@ mkdir -p "$OUTPUT_DIR/dxvk_extract"
 tar -xzf "$OUTPUT_DIR/dxvk.tar.gz" -C "$OUTPUT_DIR/dxvk_extract" --strip-components=1
 
 # Copy x32 and x64 DLLs to the Whisky structure
-cp -r "$OUTPUT_DIR/dxvk_extract/x32" "$DXVK_DIR/x32"
-cp -r "$OUTPUT_DIR/dxvk_extract/x64" "$DXVK_DIR/x64"
+if [ -d "$OUTPUT_DIR/dxvk_extract/x32" ]; then
+    cp -r "$OUTPUT_DIR/dxvk_extract/x32" "$DXVK_DIR/x32"
+    cp -r "$OUTPUT_DIR/dxvk_extract/x64" "$DXVK_DIR/x64"
+elif [ -d "$OUTPUT_DIR/dxvk_extract/i386-windows" ]; then
+    cp -r "$OUTPUT_DIR/dxvk_extract/i386-windows" "$DXVK_DIR/x32"
+    cp -r "$OUTPUT_DIR/dxvk_extract/x86_64-windows" "$DXVK_DIR/x64"
+else
+    echo "Failed to locate DXVK x32/x64 directories."
+    exit 1
+fi
+
 rm -rf "$OUTPUT_DIR/dxvk_extract" "$OUTPUT_DIR/dxvk.tar.gz"
 
 # -----------------------------------------------------------------------------
