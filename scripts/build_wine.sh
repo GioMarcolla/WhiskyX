@@ -58,11 +58,11 @@ fi
 rm -rf "$OUTPUT_DIR/wine_extract" "$OUTPUT_DIR/wine.tar.xz"
 
 # -----------------------------------------------------------------------------
-# 2. Fetch DXVK from doitsujin
+# 2. Fetch DXVK from Gcenx/DXVK-macOS (macOS patched version)
 # -----------------------------------------------------------------------------
-echo "==> Fetching latest upstream DXVK from doitsujin/dxvk..."
-DXVK_RELEASE_API="https://api.github.com/repos/doitsujin/dxvk/releases/latest"
-DXVK_DOWNLOAD_URL=$(fetch_github_api "$DXVK_RELEASE_API" | grep "browser_download_url.*dxvk-.*.tar.gz" | head -n 1 | cut -d '"' -f 4)
+echo "==> Fetching latest upstream DXVK from Gcenx/DXVK-macOS..."
+DXVK_RELEASE_API="https://api.github.com/repos/Gcenx/DXVK-macOS/releases/latest"
+DXVK_DOWNLOAD_URL=$(fetch_github_api "$DXVK_RELEASE_API" | grep "browser_download_url.*dxvk-macOS-.*.tar.gz" | head -n 1 | cut -d '"' -f 4)
 
 echo "    Downloading: $DXVK_DOWNLOAD_URL"
 curl -sL "$DXVK_DOWNLOAD_URL" -o "$OUTPUT_DIR/dxvk.tar.gz"
