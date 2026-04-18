@@ -22,6 +22,9 @@ jobs:
       - name: Resolve Swift Packages
         run: xcodebuild -resolvePackageDependencies -project Whisky.xcodeproj
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Build Whisky App
         run: |
           xcodebuild -project Whisky.xcodeproj \
