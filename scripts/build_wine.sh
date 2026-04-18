@@ -47,6 +47,14 @@ if [ -z "$WINE_RESOURCES_DIR" ]; then
     exit 1
 fi
 cp -R "$WINE_RESOURCES_DIR/"* "$WINE_DIR/"
+
+# Whisky expects 'wine64', but upstream macOS builds may only provide 'wine'.
+# We create a symlink to ensure compatibility.
+if [ -f "$WINE_DIR/bin/wine" ] && [ ! -f "$WINE_DIR/bin/wine64" ]; then
+    echo "    Creating wine64 symlink..."
+    ln -s wine "$WINE_DIR/bin/wine64"
+fi
+
 rm -rf "$OUTPUT_DIR/wine_extract" "$OUTPUT_DIR/wine.tar.xz"
 
 # -----------------------------------------------------------------------------
