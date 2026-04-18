@@ -32,7 +32,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: wine-${{ github.event.inputs.wine_version }}
+          tag_name: wine-latest
           name: Wine ${{ github.event.inputs.wine_version }}
           files: |
             build_output/Libraries.tar.gz
