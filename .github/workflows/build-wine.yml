@@ -19,10 +19,9 @@ jobs:
         run: chmod +x scripts/build_wine.sh
 
       - name: Run Build Script
-        run: |
-          # Override the script's internal version with the workflow input
-          sed -i '' "s/WINE_VERSION=\"9.0\"/WINE_VERSION=\"${{ github.event.inputs.wine_version }}\"/" scripts/build_wine.sh
-          ./scripts/build_wine.sh
+        run: ./scripts/build_wine.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

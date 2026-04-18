@@ -15,13 +15,21 @@ echo "==> Preparing independent build environment"
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$WINE_DIR" "$DXVK_DIR"
 
+fetch_github_api() {
+    if [ -n "$GITHUB_TOKEN" ]; then
+        curl -s -H "Authorization: token $GITHUB_TOKEN" "$1"
+    else
+        curl -s "$1"
+    fi
+}
+
 # -----------------------------------------------------------------------------
 # 1. Fetch Wine Core from Gcenx
 # -----------------------------------------------------------------------------
 echo "==> Fetching latest upstream Wine from Gcenx/macOS_Wine_builds..."
 WINE_RELEASE_API="https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases/latest"
-WINE_TAG=$(curl -s "$WINE_RELEASE_API" | grep '"tag_name"' | cut -d '"' -f 4)
-WINE_DOWNLOAD_URL=$(curl -s "$WINE_RELEASE_API" | grep "browser_download_url.*wine-devel.*osx64.tar.xz" | head -n 1 | cut -d '"' -f 4)
+WINE_TAG=$(fetch_github_api "$WINE_RELEASE_API" | grep '"tag_name"' | cut -d '"' -f 4)
+WINE_DOWNLOAD_URL=$(fetch_github_api "$WINE_RELEASE_API" | grep "browser_download_url.*wine-devel.*osx64.tar.xz" | head -n 1 | cut -d '"' -f 4)
 
 if [ -z "$WINE_DOWNLOAD_URL" ]; then
     echo "Failed to find Wine download URL."
@@ -39,7 +47,7 @@ rm -f "$OUTPUT_DIR/wine.tar.xz"
 # -----------------------------------------------------------------------------
 echo "==> Fetching latest upstream DXVK from doitsujin/dxvk..."
 DXVK_RELEASE_API="https://api.github.com/repos/doitsujin/dxvk/releases/latest"
-DXVK_DOWNLOAD_URL=$(curl -s "$DXVK_RELEASE_API" | grep "browser_download_url.*dxvk-.*.tar.gz" | head -n 1 | cut -d '"' -f 4)
+DXVK_DOWNLOAD_URL=$(fetch_github_api "$DXVK_RELEASE_API" | grep "browser_download_url.*dxvk-.*.tar.gz" | head -n 1 | cut -d '"' -f 4)
 
 echo "    Downloading: $DXVK_DOWNLOAD_URL"
 curl -sL "$DXVK_DOWNLOAD_URL" -o "$OUTPUT_DIR/dxvk.tar.gz"
