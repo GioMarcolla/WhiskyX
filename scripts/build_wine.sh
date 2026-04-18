@@ -39,8 +39,15 @@ fi
 echo "    Downloading: $WINE_DOWNLOAD_URL"
 curl -sL "$WINE_DOWNLOAD_URL" -o "$OUTPUT_DIR/wine.tar.xz"
 echo "    Extracting Wine..."
-tar -xf "$OUTPUT_DIR/wine.tar.xz" -C "$WINE_DIR" --strip-components=1
-rm -f "$OUTPUT_DIR/wine.tar.xz"
+mkdir -p "$OUTPUT_DIR/wine_extract"
+tar -xf "$OUTPUT_DIR/wine.tar.xz" -C "$OUTPUT_DIR/wine_extract"
+WINE_RESOURCES_DIR=$(find "$OUTPUT_DIR/wine_extract" -type d -name "wine" | grep "Contents/Resources/wine" | head -n 1)
+if [ -z "$WINE_RESOURCES_DIR" ]; then
+    echo "Failed to find 'wine' directory inside the extracted app."
+    exit 1
+fi
+cp -R "$WINE_RESOURCES_DIR/"* "$WINE_DIR/"
+rm -rf "$OUTPUT_DIR/wine_extract" "$OUTPUT_DIR/wine.tar.xz"
 
 # -----------------------------------------------------------------------------
 # 2. Fetch DXVK from doitsujin
