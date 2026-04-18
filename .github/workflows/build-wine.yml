@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       wine_version:
-        description: 'Wine version to build and release (e.g., 9.0)'
+        description: 'Wine version to build (e.g., 11.7)'
         required: true
-        default: '9.0'
+        default: '11.7'
 
 jobs:
   build-wine:
@@ -15,19 +15,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install bison flex mingw-w64 molten-vk vulkan-loader
+
       - name: Make Build Script Executable
         run: chmod +x scripts/build_wine.sh
 
-      - name: Run Build Script
-        run: ./scripts/build_wine.sh
+      - name: Build Wine
+        run: ./scripts/build_wine.sh "${{ github.event.inputs.wine_version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: wine-latest
-          name: Latest Wine Release
+          tag_name: wine-${{ github.event.inputs.wine_version }}
+          name: Wine ${{ github.event.inputs.wine_version }}
           files: |
             build_output/Libraries.tar.gz
             build_output/Libraries/WhiskyWineVersion.plist
