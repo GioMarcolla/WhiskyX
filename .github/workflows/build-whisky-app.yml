@@ -36,6 +36,10 @@ jobs:
             CODE_SIGNING_ALLOWED=YES \
             build
 
+      - name: Ad-hoc Sign App and Frameworks
+        run: |
+          codesign --force --deep --sign - build/Build/Products/Release/Whisky.app
+
       - name: Package App into ZIP
         run: |
           cd build/Build/Products/Release
