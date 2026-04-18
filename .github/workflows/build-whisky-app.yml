@@ -1,0 +1,51 @@
+name: Build and Release WhiskyX App
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version Tag for Release (e.g., v2.0.0)'
+        required: true
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode Environment
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Resolve Swift Packages
+        run: xcodebuild -resolvePackageDependencies -project Whisky.xcodeproj
+
+      - name: Build Whisky App
+        run: |
+          xcodebuild -project Whisky.xcodeproj \
+            -scheme Whisky \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            build
+
+      - name: Package App into ZIP
+        run: |
+          cd build/Build/Products/Release
+          zip -ry ../../../../Whisky.zip Whisky.app
+          cd ../../../..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_tag }}
+          name: Release ${{ github.event.inputs.version_tag }}
+          files: Whisky.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
