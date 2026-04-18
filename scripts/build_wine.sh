@@ -1,65 +1,70 @@
 #!/bin/bash
 
 # build_wine.sh
-# This script compiles/packages the latest Wine version for Whisky and packages it into Libraries.tar.gz
+# This script constructs the Whisky Libraries environment COMPLETELY from upstream open-source sources,
+# ensuring 100% independence from deprecated Whisky servers.
 
 set -e
 
-# Configuration
-WINE_VERSION="9.0"  # This can be dynamically fetched in a real CI environment
 OUTPUT_DIR="build_output"
 LIBRARIES_DIR="$OUTPUT_DIR/Libraries"
 WINE_DIR="$LIBRARIES_DIR/Wine"
+DXVK_DIR="$LIBRARIES_DIR/DXVK"
 
-echo "==> Preparing build environment for Wine version $WINE_VERSION"
-mkdir -p "$WINE_DIR"
-mkdir -p "$LIBRARIES_DIR/DXVK"
+echo "==> Preparing independent build environment"
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$WINE_DIR" "$DXVK_DIR"
 
-# ==============================================================================
-# OPTION 1: Compile from Source (Example)
-# Compiling Wine from source on macOS requires heavily patched sources and SDKs.
-# Below is the generic compilation command if the environment is set up:
-# ==============================================================================
-compile_from_source() {
-    echo "==> Compiling Wine from source (Warning: Requires bison, flex, mingw, etc.)"
-    # curl -sO https://dl.winehq.org/wine/source/9.x/wine-$WINE_VERSION.tar.xz
-    # tar xf wine-$WINE_VERSION.tar.xz
-    # cd wine-$WINE_VERSION
-    # ./configure --enable-win64 --prefix=$(pwd)/../$WINE_DIR
-    # make -j$(sysctl -n hw.ncpu)
-    # make install
-    # cd ..
-}
+# -----------------------------------------------------------------------------
+# 1. Fetch Wine Core from Gcenx
+# -----------------------------------------------------------------------------
+echo "==> Fetching latest upstream Wine from Gcenx/macOS_Wine_builds..."
+WINE_RELEASE_API="https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases/latest"
+WINE_TAG=$(curl -s "$WINE_RELEASE_API" | grep '"tag_name"' | cut -d '"' -f 4)
+WINE_DOWNLOAD_URL=$(curl -s "$WINE_RELEASE_API" | grep "browser_download_url.*wine-devel.*osx64.tar.xz" | head -n 1 | cut -d '"' -f 4)
 
-# ==============================================================================
-# OPTION 2: Download & Package Precompiled Community Builds (Recommended for CI)
-# Whisky typically relies on CrossOver's fork, so using precompiled binaries 
-# from Gcenx or Homebrew is much more reliable on macOS.
-# ==============================================================================
-fetch_precompiled() {
-    echo "==> Fetching precompiled macOS Wine build (Gcenx)"
-    # Example fetching the latest release from a community build that supports macOS
-    curl -sL "https://github.com/Gcenx/macOS_Wine_builds/releases/download/$WINE_VERSION/wine-crossover-$WINE_VERSION-osx64.tar.xz" -o wine.tar.xz || echo "Failed to fetch. In a real script, provide a valid URL."
-    # Extact directly into Wine dir
-    # tar xf wine.tar.xz -C "$WINE_DIR" --strip-components=1
-}
+if [ -z "$WINE_DOWNLOAD_URL" ]; then
+    echo "Failed to find Wine download URL."
+    exit 1
+fi
 
-# For the sake of this script, we'll simulate the directory structure needed by Whisky
-echo "==> Generating Wine directory structure..."
-mkdir -p "$WINE_DIR/bin" "$WINE_DIR/lib" "$WINE_DIR/share/wine"
-touch "$WINE_DIR/bin/wine64" "$WINE_DIR/bin/wineserver"
-chmod +x "$WINE_DIR/bin/wine64" "$WINE_DIR/bin/wineserver"
+echo "    Downloading: $WINE_DOWNLOAD_URL"
+curl -sL "$WINE_DOWNLOAD_URL" -o "$OUTPUT_DIR/wine.tar.xz"
+echo "    Extracting Wine..."
+tar -xf "$OUTPUT_DIR/wine.tar.xz" -C "$WINE_DIR" --strip-components=1
+rm -f "$OUTPUT_DIR/wine.tar.xz"
 
-echo "==> Fetching DXVK..."
-# In a real environment, download DXVK from https://github.com/doitsujin/dxvk/releases
-mkdir -p "$LIBRARIES_DIR/DXVK/x64" "$LIBRARIES_DIR/DXVK/x32"
+# -----------------------------------------------------------------------------
+# 2. Fetch DXVK from doitsujin
+# -----------------------------------------------------------------------------
+echo "==> Fetching latest upstream DXVK from doitsujin/dxvk..."
+DXVK_RELEASE_API="https://api.github.com/repos/doitsujin/dxvk/releases/latest"
+DXVK_DOWNLOAD_URL=$(curl -s "$DXVK_RELEASE_API" | grep "browser_download_url.*dxvk-.*.tar.gz" | head -n 1 | cut -d '"' -f 4)
 
-echo "==> Creating winetricks..."
-# Fetch winetricks
-# curl -sL https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks -o "$LIBRARIES_DIR/winetricks"
-touch "$LIBRARIES_DIR/winetricks" "$LIBRARIES_DIR/verbs.txt"
+echo "    Downloading: $DXVK_DOWNLOAD_URL"
+curl -sL "$DXVK_DOWNLOAD_URL" -o "$OUTPUT_DIR/dxvk.tar.gz"
+echo "    Extracting DXVK..."
+mkdir -p "$OUTPUT_DIR/dxvk_extract"
+tar -xzf "$OUTPUT_DIR/dxvk.tar.gz" -C "$OUTPUT_DIR/dxvk_extract" --strip-components=1
+
+# Copy x32 and x64 DLLs to the Whisky structure
+cp -r "$OUTPUT_DIR/dxvk_extract/x32" "$DXVK_DIR/x32"
+cp -r "$OUTPUT_DIR/dxvk_extract/x64" "$DXVK_DIR/x64"
+rm -rf "$OUTPUT_DIR/dxvk_extract" "$OUTPUT_DIR/dxvk.tar.gz"
+
+# -----------------------------------------------------------------------------
+# 3. Fetch Winetricks and Generate Verbs
+# -----------------------------------------------------------------------------
+echo "==> Fetching latest Winetricks..."
+curl -sL "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -o "$LIBRARIES_DIR/winetricks"
 chmod +x "$LIBRARIES_DIR/winetricks"
 
+echo "==> Generating verbs.txt list..."
+"$LIBRARIES_DIR/winetricks" list-all 2>/dev/null > "$LIBRARIES_DIR/verbs.txt"
+
+# -----------------------------------------------------------------------------
+# 4. Generate Version Manifest
+# -----------------------------------------------------------------------------
 echo "==> Generating WhiskyWineVersion.plist"
 cat <<EOF > "$LIBRARIES_DIR/WhiskyWineVersion.plist"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -67,14 +72,17 @@ cat <<EOF > "$LIBRARIES_DIR/WhiskyWineVersion.plist"
 <plist version="1.0">
 <dict>
 	<key>version</key>
-	<string>$WINE_VERSION.0</string>
+	<string>$WINE_TAG</string>
 </dict>
 </plist>
 EOF
 
+# -----------------------------------------------------------------------------
+# 5. Package for Release
+# -----------------------------------------------------------------------------
 echo "==> Packaging Libraries.tar.gz"
 cd "$OUTPUT_DIR"
 tar -czf Libraries.tar.gz Libraries/
 
-echo "==> Build complete! Libraries.tar.gz is ready to be uploaded to GitHub Releases."
-echo "File located at: $(pwd)/Libraries.tar.gz"
+echo "==> Independent Build Complete!"
+echo "Libraries.tar.gz is ready. Wine version: $WINE_TAG"
